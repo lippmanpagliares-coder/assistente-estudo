@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assistente Inteligente de Estudos</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topo">
+  <div class="topo-conteudo">
+    <button id="btn-voltar" class="btn-voltar" hidden>&larr; Voltar</button>
+    <h1>📘 Assistente de Estudos</h1>
+    <button id="btn-sair" class="btn-voltar" hidden style="margin-left:auto">Sair</button>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- TELA LOGIN -->
+  <section id="tela-login" class="tela">
+    <div class="cartao-login">
+      <h2>Entrar</h2>
+      <p class="dica">Use o acesso da família. Se ainda não existe um, crie um abaixo.</p>
+      <form id="form-login" class="formulario">
+        <label>
+          E-mail
+          <input type="email" id="login-email" required>
+        </label>
+        <label>
+          Senha
+          <input type="password" id="login-senha" required minlength="6">
+        </label>
+        <p id="login-erro" class="erro" hidden></p>
+        <button type="submit" class="btn-primario">Entrar</button>
+      </form>
+      <button id="btn-criar-acesso" class="btn-secundario">Criar acesso para um membro da família</button>
+    </div>
+  </section>
+
+  <!-- TELA INICIAL -->
+  <section id="tela-inicial" class="tela" hidden>
+    <div class="cartao-destaque">
+      <button id="btn-nova-prova" class="btn-grande">+ Preparar Nova Prova</button>
+    </div>
+
+    <h2>Provas preparadas</h2>
+    <div id="lista-provas" class="lista-provas">
+      <!-- preenchido via JS -->
+    </div>
+    <p id="msg-sem-provas" class="msg-vazio" hidden>Nenhuma prova preparada ainda. Clique em "Preparar Nova Prova" para começar.</p>
+  </section>
+
+  <!-- TELA NOVA PROVA -->
+  <section id="tela-nova-prova" class="tela" hidden>
+    <h2>Preparar nova prova</h2>
+
+    <form id="form-nova-prova" class="formulario">
+      <label>
+        Matéria
+        <input type="text" id="campo-materia" placeholder="Ex.: Ciências" required>
+      </label>
+      <label>
+        Data da prova
+        <input type="date" id="campo-data" required>
+      </label>
+      <label>
+        Conteúdo (capítulos / assunto)
+        <input type="text" id="campo-conteudo" placeholder="Ex.: Capítulos 4 e 5 — Fotossíntese">
+      </label>
+      <button type="submit" class="btn-primario">Avançar para as páginas do livro</button>
+    </form>
+  </section>
+
+  <!-- TELA ADICIONAR PÁGINAS -->
+  <section id="tela-paginas" class="tela" hidden>
+    <h2 id="titulo-paginas">Adicionar páginas do livro</h2>
+    <p class="dica">
+      Fotografe cada página indicada pela escola (uma foto por página) e adicione abaixo.
+      A inteligência artificial vai ler o conteúdo direto das fotos.
+    </p>
+
+    <div id="lista-paginas" class="lista-paginas"></div>
+
+    <div class="cartao-adicionar-pagina">
+      <h3 id="rotulo-nova-pagina">Nova página</h3>
+      <label class="upload-foto">
+        📷 Escolher / tirar foto da página
+        <input type="file" id="campo-foto" accept="image/*" capture="environment">
+      </label>
+      <img id="preview-foto" class="preview-foto" hidden>
+      <p id="msg-foto-status" class="msg-vazio" hidden></p>
+      <button id="btn-adicionar-pagina" type="button" class="btn-secundario" disabled>+ Adicionar esta página</button>
+    </div>
+
+    <div class="acoes-paginas">
+      <button id="btn-analisar" type="button" class="btn-primario" disabled>Analisar Conteúdo</button>
+      <p id="msg-analisando" class="msg-vazio" hidden>Analisando páginas com IA...</p>
+      <p id="msg-erro-analise" class="erro" hidden></p>
+    </div>
+  </section>
+
+  <!-- TELA MATERIAL GERADO -->
+  <section id="tela-material" class="tela" hidden>
+    <div class="cabecalho-material">
+      <div>
+        <h2 id="material-titulo">Material de estudos</h2>
+        <p id="material-subtitulo" class="subtitulo"></p>
+      </div>
+    </div>
+
+    <div class="abas">
+      <button class="aba ativa" data-alvo="parte-resumo">Resumo</button>
+      <button class="aba" data-alvo="parte-precisa">Preciso saber</button>
+      <button class="aba" data-alvo="parte-glossario">Palavras importantes</button>
+      <button class="aba" data-alvo="parte-questoes">Questões</button>
+    </div>
+
+    <div id="parte-resumo" class="parte-conteudo"></div>
+    <div id="parte-precisa" class="parte-conteudo" hidden></div>
+    <div id="parte-glossario" class="parte-conteudo" hidden></div>
+    <div id="parte-questoes" class="parte-conteudo" hidden></div>
+
+    <div class="acoes-material">
+      <button id="btn-mostrar-gabarito" class="btn-secundario">Mostrar gabarito</button>
+      <button id="btn-imprimir" class="btn-primario">🖨️ Gerar Caderno de Estudos (imprimir / salvar PDF)</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- ÁREA SOMENTE PARA IMPRESSÃO -->
+<div id="area-impressao" class="area-impressao"></div>
+
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
