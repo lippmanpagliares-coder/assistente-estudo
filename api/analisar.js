@@ -95,10 +95,7 @@ module.exports = async (req, res) => {
     const blocoTexto = (dados.content || []).find((b) => b.type === "text");
     const textoResposta = blocoTexto?.text || "";
     if (!textoResposta) {
-      res.status(502).json({
-        error: "Resposta da IA sem texto.",
-        debugDadosBrutos: JSON.stringify(dados).slice(0, 1500),
-      });
+      res.status(502).json({ error: "A IA não retornou nenhum texto. Tente novamente." });
       return;
     }
     const textoLimpo = textoResposta
@@ -111,11 +108,7 @@ module.exports = async (req, res) => {
     try {
       material = JSON.parse(textoLimpo);
     } catch {
-      res.status(502).json({
-        error: "A IA não retornou um JSON válido. Tente novamente.",
-        debugStopReason: dados.stop_reason,
-        debugTrecho: textoLimpo.slice(0, 800) + (textoLimpo.length > 800 ? "…[cortado]…" + textoLimpo.slice(-400) : ""),
-      });
+      res.status(502).json({ error: "A IA não retornou um JSON válido. Tente novamente." });
       return;
     }
 
