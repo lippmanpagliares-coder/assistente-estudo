@@ -393,12 +393,28 @@ function gerarCabecalhoImpressao() {
   `;
 }
 
-document.getElementById("btn-imprimir").addEventListener("click", () => {
+document.getElementById("btn-gerar-simulado").addEventListener("click", () => {
+  const quantidadeSel = document.getElementById("simulado-quantidade").value;
+  const dificuldadeSel = document.getElementById("simulado-dificuldade").value;
+
+  let pool = materialAtual.questoes || [];
+  if (dificuldadeSel !== "misturado") {
+    pool = pool.filter((q) => (q.dificuldade || "medio") === dificuldadeSel);
+  }
+  if (pool.length === 0) {
+    alert('Não há questões suficientes com essa dificuldade. Tente "Misturado".');
+    return;
+  }
+  const embaralhadas = [...pool].sort(() => Math.random() - 0.5);
+  const quantidade = quantidadeSel === "todas" ? embaralhadas.length : Math.min(Number(quantidadeSel), embaralhadas.length);
+  const questoesProva = embaralhadas.slice(0, quantidade);
+
   const area = document.getElementById("area-impressao");
   const cabecalho = gerarCabecalhoImpressao();
 
+  // Parte 1 — Revisão: resumo, preciso saber, palavras importantes e exercícios (para ler e estudar)
   const parte1 = `<div class="pagina-impressa">
-    <h2>Parte 1 — Resumo</h2>
+    <h2>Parte 1 — Revisão: Resumo</h2>
     ${cabecalho}
     ${(materialAtual.resumo || "").split(/\n\s*\n/).map((p) => `<p>${escapeHtml(p.trim())}</p>`).join("")}
   </div>`;
@@ -413,65 +429,31 @@ document.getElementById("btn-imprimir").addEventListener("click", () => {
   </div>`;
 
   const parte4 = `<div class="pagina-impressa">
-    <h2>Parte 4 — Exercícios</h2>
+    <h2>Parte 4 — Exercícios para estudar</h2>
     ${(materialAtual.questoes || [])
-      .map((q, i) => {
-        const clone = { ...q };
-        const html = renderQuestao(clone, i);
-        return html.replace(/<div class="gabarito-resposta">[\s\S]*?<\/div>/, "");
-      })
+      .map((q, i) => renderQuestao(q, i).replace(/<div class="gabarito-resposta">[\s\S]*?<\/div>/, ""))
       .join("")}
   </div>`;
 
+  // Parte 5 — Prova: o simulado, para responder depois de estudar
   const parte5 = `<div class="pagina-impressa">
-    <h2>Parte 5 — Gabarito (separado para o responsável)</h2>
-    ${(materialAtual.questoes || [])
-      .map((q, i) => `<p>${i + 1}. ${escapeHtml(q.resposta)}</p>`)
-      .join("")}
-  </div>`;
-
-  area.innerHTML = parte1 + parte2e3 + parte4 + parte5;
-  window.print();
-});
-
-// ---------- simulado (prova separada) ----------
-document.getElementById("btn-gerar-simulado").addEventListener("click", () => {
-  const quantidadeSel = document.getElementById("simulado-quantidade").value;
-  const dificuldadeSel = document.getElementById("simulado-dificuldade").value;
-
-  let pool = materialAtual.questoes || [];
-  if (dificuldadeSel !== "misturado") {
-    pool = pool.filter((q) => (q.dificuldade || "medio") === dificuldadeSel);
-  }
-  if (pool.length === 0) {
-    alert('Não há questões suficientes com essa dificuldade. Tente "Misturado".');
-    return;
-  }
-
-  const embaralhadas = [...pool].sort(() => Math.random() - 0.5);
-  const quantidade = quantidadeSel === "todas" ? embaralhadas.length : Math.min(Number(quantidadeSel), embaralhadas.length);
-  const selecionadas = embaralhadas.slice(0, quantidade);
-
-  const area = document.getElementById("area-impressao");
-  const cabecalho = gerarCabecalhoImpressao();
-
-  const parteProva = `<div class="pagina-impressa">
-    <h2>Simulado</h2>
+    <h2>Parte 5 — Prova (simulado)</h2>
     ${cabecalho}
-    ${selecionadas
-      .map((q, i) => {
-        const html = renderQuestao(q, i);
-        return html.replace(/<div class="gabarito-resposta">[\s\S]*?<\/div>/, "");
-      })
+    ${questoesProva
+      .map((q, i) => renderQuestao(q, i).replace(/<div class="gabarito-resposta">[\s\S]*?<\/div>/, ""))
       .join("")}
   </div>`;
 
-  const parteGabarito = `<div class="pagina-impressa">
-    <h2>Gabarito do simulado (separado para o responsável)</h2>
-    ${selecionadas.map((q, i) => `<p>${i + 1}. ${escapeHtml(q.resposta)}</p>`).join("")}
+  // Parte 6 — Gabarito combinado (exercícios + prova), separado para o responsável
+  const parte6 = `<div class="pagina-impressa">
+    <h2>Parte 6 — Gabarito (separado para o responsável)</h2>
+    <h3>Exercícios</h3>
+    ${(materialAtual.questoes || []).map((q, i) => `<p>${i + 1}. ${escapeHtml(q.resposta)}</p>`).join("")}
+    <h3>Prova</h3>
+    ${questoesProva.map((q, i) => `<p>${i + 1}. ${escapeHtml(q.resposta)}</p>`).join("")}
   </div>`;
 
-  area.innerHTML = parteProva + parteGabarito;
+  area.innerHTML = parte1 + parte2e3 + parte4 + parte5 + parte6;
   window.print();
 });
 

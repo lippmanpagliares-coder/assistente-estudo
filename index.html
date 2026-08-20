@@ -125,15 +125,14 @@
     <div class="acoes-material">
       <button id="btn-mostrar-gabarito" class="btn-secundario">Mostrar gabarito</button>
       <button id="btn-iniciar-revisao" class="btn-secundario">▶ Iniciar Modo Revisão</button>
-      <button id="btn-imprimir" class="btn-primario">🖨️ Baixar Resumo de Estudos (PDF)</button>
     </div>
 
     <div class="cartao-simulado">
-      <h3>Criar prova (simulado)</h3>
-      <p class="dica">Monta uma prova separada, só com as perguntas (sem gabarito junto), pronta para a criança responder sozinha.</p>
+      <h3>Baixar caderno completo (revisão + prova)</h3>
+      <p class="dica">Gera um único PDF: primeiro a revisão (resumo, preciso saber, palavras importantes e exercícios) para a criança ler e estudar, depois a prova (simulado) para responder, e por fim o gabarito de tudo, separado, para o responsável.</p>
       <div class="opcoes-simulado">
         <label>
-          Quantidade
+          Questões na prova
           <select id="simulado-quantidade">
             <option value="5">5 questões</option>
             <option value="10" selected>10 questões</option>
@@ -143,7 +142,7 @@
           </select>
         </label>
         <label>
-          Dificuldade
+          Dificuldade da prova
           <select id="simulado-dificuldade">
             <option value="misturado" selected>Misturado</option>
             <option value="facil">Fácil</option>
@@ -152,7 +151,7 @@
           </select>
         </label>
       </div>
-      <button id="btn-gerar-simulado" class="btn-primario">🖨️ Baixar Prova (PDF)</button>
+      <button id="btn-gerar-simulado" class="btn-primario">🖨️ Baixar Revisão + Prova (PDF)</button>
     </div>
   </section>
 
