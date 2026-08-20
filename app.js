@@ -286,37 +286,70 @@ function renderListaPaginas() {
 // ---------- analisar conteúdo (chama a IA) ----------
 const msgAnalisando = document.getElementById("msg-analisando");
 const msgErroAnalise = document.getElementById("msg-erro-analise");
+const LIMITE_ENVIO_BYTES = 3.5 * 1024 * 1024; // margem de segurança abaixo do limite da Vercel (4.5 MB)
+
+function agruparPaginasPorTamanho(paginas) {
+  const grupos = [];
+  let grupoAtual = [];
+  let tamanhoAtual = 0;
+  for (const pagina of paginas) {
+    const tamanho = pagina.dataUrl.length;
+    if (grupoAtual.length > 0 && tamanhoAtual + tamanho > LIMITE_ENVIO_BYTES) {
+      grupos.push(grupoAtual);
+      grupoAtual = [];
+      tamanhoAtual = 0;
+    }
+    grupoAtual.push(pagina);
+    tamanhoAtual += tamanho;
+  }
+  if (grupoAtual.length > 0) grupos.push(grupoAtual);
+  return grupos;
+}
+
+function mesclarMateriais(materiais) {
+  if (materiais.length === 1) return materiais[0];
+  const resumo = materiais.map((m) => m.resumo || "").filter(Boolean).join("\n\n");
+  const precisoSaber = materiais.flatMap((m) => m.precisoSaber || []);
+  const glossarioPorTermo = new Map();
+  materiais.forEach((m) =>
+    (m.glossario || []).forEach((g) => {
+      const chave = (g.termo || "").trim().toLowerCase();
+      if (chave && !glossarioPorTermo.has(chave)) glossarioPorTermo.set(chave, g);
+    })
+  );
+  const questoes = materiais.flatMap((m) => m.questoes || []);
+  return { resumo, precisoSaber, glossario: [...glossarioPorTermo.values()], questoes };
+}
 
 btnAnalisar.addEventListener("click", async () => {
   msgErroAnalise.hidden = true;
-
-  const tamanhoTotal = paginasAtual.reduce((soma, p) => soma + p.dataUrl.length, 0);
-  if (tamanhoTotal > 4 * 1024 * 1024) {
-    msgErroAnalise.textContent = "Essas páginas juntas ficaram grandes demais para enviar. Tente analisar em grupos menores (poucas páginas por vez).";
-    msgErroAnalise.hidden = false;
-    return;
-  }
-
   msgAnalisando.hidden = false;
   btnAnalisar.disabled = true;
   try {
-    const resposta = await fetch("/api/analisar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        materia: provaEmEdicao.materia,
-        conteudo: provaEmEdicao.conteudo,
-        imagens: paginasAtual.map((p) => ({
-          mediaType: p.mediaType,
-          base64: p.dataUrl.split(",")[1],
-        })),
-      }),
-    });
-    if (!resposta.ok) {
-      const detalhe = await resposta.json().catch(() => ({}));
-      throw new Error(detalhe.error || `Falha ao analisar (HTTP ${resposta.status})`);
+    const grupos = agruparPaginasPorTamanho(paginasAtual);
+    const materiais = [];
+    for (let i = 0; i < grupos.length; i++) {
+      msgAnalisando.textContent =
+        grupos.length > 1 ? `Analisando páginas (parte ${i + 1} de ${grupos.length})...` : "Analisando páginas com IA...";
+      const resposta = await fetch("/api/analisar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          materia: provaEmEdicao.materia,
+          conteudo: provaEmEdicao.conteudo,
+          imagens: grupos[i].map((p) => ({
+            mediaType: p.mediaType,
+            base64: p.dataUrl.split(",")[1],
+          })),
+        }),
+      });
+      if (!resposta.ok) {
+        const detalhe = await resposta.json().catch(() => ({}));
+        throw new Error(detalhe.error || `Falha ao analisar (HTTP ${resposta.status})`);
+      }
+      materiais.push(await resposta.json());
     }
-    materialAtual = await resposta.json();
+    materialAtual = mesclarMateriais(materiais);
     await updateDoc(doc(db, "provas", provaEmEdicao.id), {
       status: "pronta",
       material: materialAtual,
@@ -331,6 +364,7 @@ btnAnalisar.addEventListener("click", async () => {
     msgErroAnalise.hidden = false;
   } finally {
     msgAnalisando.hidden = true;
+    msgAnalisando.textContent = "Analisando páginas com IA...";
     btnAnalisar.disabled = paginasAtual.length === 0;
   }
 });
