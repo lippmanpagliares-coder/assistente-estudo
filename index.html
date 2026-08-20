@@ -77,21 +77,18 @@
   <section id="tela-paginas" class="tela" hidden>
     <h2 id="titulo-paginas">Adicionar páginas do livro</h2>
     <p class="dica">
-      Fotografe cada página indicada pela escola (uma foto por página) e adicione abaixo.
+      Fotografe as páginas indicadas pela escola ou selecione várias fotos de uma vez da galeria.
       A inteligência artificial vai ler o conteúdo direto das fotos.
     </p>
 
     <div id="lista-paginas" class="lista-paginas"></div>
 
     <div class="cartao-adicionar-pagina">
-      <h3 id="rotulo-nova-pagina">Nova página</h3>
       <label class="upload-foto">
-        📷 Escolher / tirar foto da página
-        <input type="file" id="campo-foto" accept="image/*" capture="environment">
+        📷 Tirar foto ou escolher várias fotos
+        <input type="file" id="campo-foto" accept="image/*" multiple>
       </label>
-      <img id="preview-foto" class="preview-foto" hidden>
       <p id="msg-foto-status" class="msg-vazio" hidden></p>
-      <button id="btn-adicionar-pagina" type="button" class="btn-secundario" disabled>+ Adicionar esta página</button>
     </div>
 
     <div class="acoes-paginas">

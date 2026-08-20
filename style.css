@@ -195,7 +195,6 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 20px 80px; }
   font-weight: 600;
 }
 .upload-foto input { display: none; }
-.preview-foto { max-width: 160px; border-radius: 8px; border: 1px solid var(--borda); }
 
 .acoes-paginas { margin-top: 20px; display: flex; align-items: center; gap: 14px; }
 

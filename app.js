@@ -22,7 +22,6 @@ let telaAtual = "tela-login";
 let historicoTelas = [];
 let provaEmEdicao = null; // { id?, materia, dataProva, conteudo }
 let paginasAtual = []; // [{ dataUrl, mediaType, base64 }]
-let fotoSelecionada = null;
 let materialAtual = null; // resultado gerado pela IA para a prova aberta
 let listaProvasCache = [];
 let filaRevisao = [];
@@ -208,60 +207,61 @@ document.getElementById("form-nova-prova").addEventListener("submit", async (ev)
 
 // ---------- adicionar páginas (fotos) ----------
 const campoFoto = document.getElementById("campo-foto");
-const previewFoto = document.getElementById("preview-foto");
 const msgFotoStatus = document.getElementById("msg-foto-status");
-const btnAdicionarPagina = document.getElementById("btn-adicionar-pagina");
 const listaPaginasEl = document.getElementById("lista-paginas");
 const btnAnalisar = document.getElementById("btn-analisar");
 
 const LADO_MAXIMO_FOTO = 1600; // reduz fotos grandes de celular para não estourar o limite de upload
 
-campoFoto.addEventListener("change", () => {
-  const arquivo = campoFoto.files[0];
-  if (!arquivo) return;
-  msgFotoStatus.hidden = true;
-  msgFotoStatus.textContent = "Preparando foto...";
+function comprimirImagem(arquivo) {
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader();
+    leitor.onload = () => {
+      const imagem = new Image();
+      imagem.onload = () => {
+        let { width, height } = imagem;
+        if (width > LADO_MAXIMO_FOTO || height > LADO_MAXIMO_FOTO) {
+          if (width > height) {
+            height = Math.round(height * (LADO_MAXIMO_FOTO / width));
+            width = LADO_MAXIMO_FOTO;
+          } else {
+            width = Math.round(width * (LADO_MAXIMO_FOTO / height));
+            height = LADO_MAXIMO_FOTO;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(imagem, 0, 0, width, height);
+        resolve({ dataUrl: canvas.toDataURL("image/jpeg", 0.8), mediaType: "image/jpeg" });
+      };
+      imagem.onerror = reject;
+      imagem.src = leitor.result;
+    };
+    leitor.onerror = reject;
+    leitor.readAsDataURL(arquivo);
+  });
+}
+
+campoFoto.addEventListener("change", async () => {
+  const arquivos = Array.from(campoFoto.files || []);
+  if (arquivos.length === 0) return;
+
+  msgFotoStatus.textContent = `Processando ${arquivos.length} foto${arquivos.length > 1 ? "s" : ""}...`;
   msgFotoStatus.hidden = false;
 
-  const leitor = new FileReader();
-  leitor.onload = () => {
-    const imagem = new Image();
-    imagem.onload = () => {
-      let { width, height } = imagem;
-      if (width > LADO_MAXIMO_FOTO || height > LADO_MAXIMO_FOTO) {
-        if (width > height) {
-          height = Math.round(height * (LADO_MAXIMO_FOTO / width));
-          width = LADO_MAXIMO_FOTO;
-        } else {
-          width = Math.round(width * (LADO_MAXIMO_FOTO / height));
-          height = LADO_MAXIMO_FOTO;
-        }
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      canvas.getContext("2d").drawImage(imagem, 0, 0, width, height);
-      const dataUrlComprimido = canvas.toDataURL("image/jpeg", 0.8);
+  for (const arquivo of arquivos) {
+    try {
+      const resultado = await comprimirImagem(arquivo);
+      paginasAtual.push({ ...resultado, id: crypto.randomUUID() });
+      renderListaPaginas();
+    } catch (erro) {
+      console.error("Falha ao processar foto:", erro);
+    }
+  }
 
-      fotoSelecionada = { dataUrl: dataUrlComprimido, mediaType: "image/jpeg" };
-      previewFoto.src = dataUrlComprimido;
-      previewFoto.hidden = false;
-      btnAdicionarPagina.disabled = false;
-      msgFotoStatus.hidden = true;
-    };
-    imagem.src = leitor.result;
-  };
-  leitor.readAsDataURL(arquivo);
-});
-
-btnAdicionarPagina.addEventListener("click", () => {
-  if (!fotoSelecionada) return;
-  paginasAtual.push({ ...fotoSelecionada, id: crypto.randomUUID() });
-  fotoSelecionada = null;
   campoFoto.value = "";
-  previewFoto.hidden = true;
-  btnAdicionarPagina.disabled = true;
-  renderListaPaginas();
+  msgFotoStatus.hidden = true;
 });
 
 function renderListaPaginas() {
