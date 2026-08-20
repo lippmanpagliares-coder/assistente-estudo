@@ -103,7 +103,11 @@ module.exports = async (req, res) => {
     try {
       material = JSON.parse(textoLimpo);
     } catch {
-      res.status(502).json({ error: "A IA não retornou um JSON válido. Tente novamente." });
+      res.status(502).json({
+        error: "A IA não retornou um JSON válido. Tente novamente.",
+        debugStopReason: dados.stop_reason,
+        debugTrecho: textoLimpo.slice(0, 800) + (textoLimpo.length > 800 ? "…[cortado]…" + textoLimpo.slice(-400) : ""),
+      });
       return;
     }
 
