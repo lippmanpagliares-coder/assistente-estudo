@@ -214,16 +214,42 @@ const btnAdicionarPagina = document.getElementById("btn-adicionar-pagina");
 const listaPaginasEl = document.getElementById("lista-paginas");
 const btnAnalisar = document.getElementById("btn-analisar");
 
+const LADO_MAXIMO_FOTO = 1600; // reduz fotos grandes de celular para não estourar o limite de upload
+
 campoFoto.addEventListener("change", () => {
   const arquivo = campoFoto.files[0];
   if (!arquivo) return;
   msgFotoStatus.hidden = true;
+  msgFotoStatus.textContent = "Preparando foto...";
+  msgFotoStatus.hidden = false;
+
   const leitor = new FileReader();
   leitor.onload = () => {
-    fotoSelecionada = { dataUrl: leitor.result, mediaType: arquivo.type || "image/jpeg" };
-    previewFoto.src = leitor.result;
-    previewFoto.hidden = false;
-    btnAdicionarPagina.disabled = false;
+    const imagem = new Image();
+    imagem.onload = () => {
+      let { width, height } = imagem;
+      if (width > LADO_MAXIMO_FOTO || height > LADO_MAXIMO_FOTO) {
+        if (width > height) {
+          height = Math.round(height * (LADO_MAXIMO_FOTO / width));
+          width = LADO_MAXIMO_FOTO;
+        } else {
+          width = Math.round(width * (LADO_MAXIMO_FOTO / height));
+          height = LADO_MAXIMO_FOTO;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(imagem, 0, 0, width, height);
+      const dataUrlComprimido = canvas.toDataURL("image/jpeg", 0.8);
+
+      fotoSelecionada = { dataUrl: dataUrlComprimido, mediaType: "image/jpeg" };
+      previewFoto.src = dataUrlComprimido;
+      previewFoto.hidden = false;
+      btnAdicionarPagina.disabled = false;
+      msgFotoStatus.hidden = true;
+    };
+    imagem.src = leitor.result;
   };
   leitor.readAsDataURL(arquivo);
 });
@@ -263,6 +289,14 @@ const msgErroAnalise = document.getElementById("msg-erro-analise");
 
 btnAnalisar.addEventListener("click", async () => {
   msgErroAnalise.hidden = true;
+
+  const tamanhoTotal = paginasAtual.reduce((soma, p) => soma + p.dataUrl.length, 0);
+  if (tamanhoTotal > 4 * 1024 * 1024) {
+    msgErroAnalise.textContent = "Essas páginas juntas ficaram grandes demais para enviar. Tente analisar em grupos menores (poucas páginas por vez).";
+    msgErroAnalise.hidden = false;
+    return;
+  }
+
   msgAnalisando.hidden = false;
   btnAnalisar.disabled = true;
   try {
