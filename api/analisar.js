@@ -92,7 +92,15 @@ module.exports = async (req, res) => {
     }
 
     const dados = await respostaApi.json();
-    const textoResposta = dados.content?.[0]?.text || "";
+    const blocoTexto = (dados.content || []).find((b) => b.type === "text");
+    const textoResposta = blocoTexto?.text || "";
+    if (!textoResposta) {
+      res.status(502).json({
+        error: "Resposta da IA sem texto.",
+        debugDadosBrutos: JSON.stringify(dados).slice(0, 1500),
+      });
+      return;
+    }
     const textoLimpo = textoResposta
       .trim()
       .replace(/^```json\s*/i, "")
