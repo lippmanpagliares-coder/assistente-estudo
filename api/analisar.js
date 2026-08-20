@@ -30,7 +30,7 @@ linguagem simples e adequada ao ano escolar indicado pela matéria/conteúdo inf
 2 a 4 parágrafos.
 `;
 
-module.exports = async (req, res) => {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Método não permitido." });
     return;
@@ -118,4 +118,7 @@ module.exports = async (req, res) => {
   } catch (erro) {
     res.status(500).json({ error: `Falha ao chamar a IA: ${erro.message}` });
   }
-};
+}
+
+module.exports = handler;
+module.exports.config = { maxDuration: 60 };
