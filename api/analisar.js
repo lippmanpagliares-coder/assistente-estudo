@@ -15,17 +15,19 @@ Responda APENAS com um JSON válido (sem markdown, sem texto fora do JSON), no f
   "precisoSaber": ["ponto essencial 1", "ponto essencial 2", "..."],
   "glossario": [{"termo": "palavra importante", "definicao": "explicação curta e simples"}],
   "questoes": [
-    {"tipo": "multipla", "enunciado": "...", "opcoes": ["opção a", "opção b", "opção c", "opção d"], "resposta": "texto da opção correta"},
-    {"tipo": "vf", "enunciado": "afirmação para julgar", "resposta": "Verdadeiro" ou "Falso"},
-    {"tipo": "complete", "enunciado": "frase com uma lacuna representada por ______", "resposta": "palavra ou expressão que completa a lacuna"},
-    {"tipo": "resposta", "enunciado": "pergunta aberta para a criança explicar com as próprias palavras", "resposta": "resposta modelo de referência"},
-    {"tipo": "desafio", "enunciado": "pergunta que exige aplicar o conceito a uma situação nova", "resposta": "resposta modelo de referência"}
+    {"tipo": "multipla", "dificuldade": "facil", "enunciado": "...", "opcoes": ["opção a", "opção b", "opção c", "opção d"], "resposta": "texto da opção correta"},
+    {"tipo": "vf", "dificuldade": "facil", "enunciado": "afirmação para julgar", "resposta": "Verdadeiro" ou "Falso"},
+    {"tipo": "complete", "dificuldade": "medio", "enunciado": "frase com uma lacuna representada por ______", "resposta": "palavra ou expressão que completa a lacuna"},
+    {"tipo": "resposta", "dificuldade": "medio", "enunciado": "pergunta aberta para a criança explicar com as próprias palavras", "resposta": "resposta modelo de referência"},
+    {"tipo": "desafio", "dificuldade": "dificil", "enunciado": "pergunta que exige aplicar o conceito a uma situação nova", "resposta": "resposta modelo de referência"}
   ]
 }
 
-Gere pelo menos 5 questões cobrindo os 5 tipos acima (pode repetir tipos se fizer sentido, mas inclua
-todos ao menos uma vez). Use linguagem simples e adequada ao ano escolar indicado pela matéria/conteúdo
-informados. O resumo deve ter 2 a 4 parágrafos.
+Gere entre 10 e 14 questões no total, cobrindo os 5 tipos acima (pode repetir tipos). Cada questão deve
+ter o campo "dificuldade" com um dos valores "facil", "medio" ou "dificil", com uma mistura equilibrada
+das três (essas questões serão reaproveitadas depois para montar um simulado por dificuldade). Use
+linguagem simples e adequada ao ano escolar indicado pela matéria/conteúdo informados. O resumo deve ter
+2 a 4 parágrafos.
 `;
 
 module.exports = async (req, res) => {

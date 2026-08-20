@@ -244,6 +244,31 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 20px 80px; }
 
 .acoes-material { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
 
+.cartao-simulado {
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-top: 24px;
+}
+.cartao-simulado h3 { margin-top: 0; }
+.opcoes-simulado { display: flex; gap: 16px; margin: 12px 0 16px; flex-wrap: wrap; }
+.opcoes-simulado label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 0.88rem; }
+.opcoes-simulado select {
+  font-family: inherit; font-size: 0.95rem; padding: 8px 10px;
+  border: 1px solid var(--borda); border-radius: 8px; background: white; color: var(--texto);
+}
+
+.opcoes-revisao { display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+.opcoes-revisao button { text-align: left; }
+
+.btn-excluir-prova {
+  background: none; border: none; color: #c0392b; cursor: pointer; font-size: 0.85rem;
+  padding: 4px 8px; align-self: flex-start;
+}
+.btn-excluir-prova:hover { text-decoration: underline; }
+.linha-cartao-prova { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
 .area-impressao { display: none; }
 
 @media print {

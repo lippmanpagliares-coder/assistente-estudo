@@ -9,6 +9,7 @@ import {
   collection,
   addDoc,
   updateDoc,
+  deleteDoc,
   doc,
   getDocs,
   query,
@@ -24,6 +25,9 @@ let paginasAtual = []; // [{ dataUrl, mediaType, base64 }]
 let fotoSelecionada = null;
 let materialAtual = null; // resultado gerado pela IA para a prova aberta
 let listaProvasCache = [];
+let filaRevisao = [];
+let indiceRevisaoAtual = 0;
+let resultadosRevisao = [];
 
 // ---------- navegação ----------
 function mostrarTela(id, { empilhar = true } = {}) {
@@ -133,17 +137,36 @@ async function carregarProvas() {
         <h3>${escapeHtml(prova.materia)}</h3>
         <p>Prova em ${dataFormatada}${prova.conteudo ? " · " + escapeHtml(prova.conteudo) : ""}</p>
       </div>
-      <span class="estado-prova ${prova.status === "pronta" ? "pronta" : ""}">${
-        prova.status === "pronta" ? "Material pronto" : "Em preparação"
-      }</span>
+      <div class="linha-cartao-prova">
+        <span class="estado-prova ${prova.status === "pronta" ? "pronta" : ""}">${
+          prova.status === "pronta" ? "Material pronto" : "Em preparação"
+        }</span>
+        <button class="btn-excluir-prova" type="button">Excluir</button>
+      </div>
     `;
     cartao.addEventListener("click", () => abrirProva(prova));
+    cartao.querySelector(".btn-excluir-prova").addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      if (!confirm(`Excluir a prova de ${prova.materia}? Essa ação não pode ser desfeita.`)) return;
+      try {
+        await deleteDoc(doc(db, "provas", prova.id));
+        await carregarProvas();
+      } catch (erro) {
+        alert("Não foi possível excluir: " + erro.message);
+      }
+    });
     listaProvasEl.appendChild(cartao);
   }
 }
 
 function abrirProva(prova) {
-  provaEmEdicao = { id: prova.id, materia: prova.materia, dataProva: prova.dataProva, conteudo: prova.conteudo };
+  provaEmEdicao = {
+    id: prova.id,
+    materia: prova.materia,
+    dataProva: prova.dataProva,
+    conteudo: prova.conteudo,
+    questoesErradas: prova.questoesErradas || [],
+  };
   if (prova.status === "pronta" && prova.material) {
     materialAtual = prova.material;
     exibirMaterial();
@@ -359,17 +382,20 @@ btnMostrarGabarito.addEventListener("click", () => {
 });
 
 // ---------- impressão / PDF ----------
-document.getElementById("btn-imprimir").addEventListener("click", () => {
-  const area = document.getElementById("area-impressao");
+function gerarCabecalhoImpressao() {
   const dataFormatada = provaEmEdicao.dataProva
     ? new Date(provaEmEdicao.dataProva + "T00:00:00").toLocaleDateString("pt-BR")
     : "";
-
-  const cabecalho = `
+  return `
     <div class="campo-nome">Nome: <span>&nbsp;</span></div>
     <p><strong>Matéria:</strong> ${escapeHtml(provaEmEdicao.materia)} &nbsp;&nbsp;
        <strong>Prova em:</strong> ${dataFormatada}</p>
   `;
+}
+
+document.getElementById("btn-imprimir").addEventListener("click", () => {
+  const area = document.getElementById("area-impressao");
+  const cabecalho = gerarCabecalhoImpressao();
 
   const parte1 = `<div class="pagina-impressa">
     <h2>Parte 1 — Resumo</h2>
@@ -407,6 +433,176 @@ document.getElementById("btn-imprimir").addEventListener("click", () => {
   area.innerHTML = parte1 + parte2e3 + parte4 + parte5;
   window.print();
 });
+
+// ---------- simulado (prova separada) ----------
+document.getElementById("btn-gerar-simulado").addEventListener("click", () => {
+  const quantidadeSel = document.getElementById("simulado-quantidade").value;
+  const dificuldadeSel = document.getElementById("simulado-dificuldade").value;
+
+  let pool = materialAtual.questoes || [];
+  if (dificuldadeSel !== "misturado") {
+    pool = pool.filter((q) => (q.dificuldade || "medio") === dificuldadeSel);
+  }
+  if (pool.length === 0) {
+    alert('Não há questões suficientes com essa dificuldade. Tente "Misturado".');
+    return;
+  }
+
+  const embaralhadas = [...pool].sort(() => Math.random() - 0.5);
+  const quantidade = quantidadeSel === "todas" ? embaralhadas.length : Math.min(Number(quantidadeSel), embaralhadas.length);
+  const selecionadas = embaralhadas.slice(0, quantidade);
+
+  const area = document.getElementById("area-impressao");
+  const cabecalho = gerarCabecalhoImpressao();
+
+  const parteProva = `<div class="pagina-impressa">
+    <h2>Simulado</h2>
+    ${cabecalho}
+    ${selecionadas
+      .map((q, i) => {
+        const html = renderQuestao(q, i);
+        return html.replace(/<div class="gabarito-resposta">[\s\S]*?<\/div>/, "");
+      })
+      .join("")}
+  </div>`;
+
+  const parteGabarito = `<div class="pagina-impressa">
+    <h2>Gabarito do simulado (separado para o responsável)</h2>
+    ${selecionadas.map((q, i) => `<p>${i + 1}. ${escapeHtml(q.resposta)}</p>`).join("")}
+  </div>`;
+
+  area.innerHTML = parteProva + parteGabarito;
+  window.print();
+});
+
+// ---------- modo revisão ----------
+const telaRevisao = document.getElementById("tela-revisao");
+const revisaoProgresso = document.getElementById("revisao-progresso");
+const revisaoQuestaoArea = document.getElementById("revisao-questao-area");
+const revisaoResultado = document.getElementById("revisao-resultado");
+
+document.getElementById("btn-iniciar-revisao").addEventListener("click", () => iniciarRevisao());
+
+function iniciarRevisao(apenasFracas = false) {
+  const todas = (materialAtual.questoes || []).map((q, i) => ({ ...q, _indiceOriginal: i }));
+  const fracasSet = new Set(provaEmEdicao.questoesErradas || []);
+  let fila;
+  if (apenasFracas && fracasSet.size) {
+    fila = todas.filter((q) => fracasSet.has(q.enunciado));
+  } else {
+    const fracas = todas.filter((q) => fracasSet.has(q.enunciado));
+    const outras = todas.filter((q) => !fracasSet.has(q.enunciado)).sort(() => Math.random() - 0.5);
+    fila = [...fracas, ...outras];
+  }
+  if (fila.length === 0) fila = todas;
+
+  filaRevisao = fila;
+  indiceRevisaoAtual = 0;
+  resultadosRevisao = [];
+  revisaoResultado.hidden = true;
+  revisaoQuestaoArea.hidden = false;
+  mostrarTela("tela-revisao");
+  renderQuestaoRevisao();
+}
+
+function renderQuestaoRevisao() {
+  const total = filaRevisao.length;
+  const atual = filaRevisao[indiceRevisaoAtual];
+  revisaoProgresso.textContent = `Pergunta ${indiceRevisaoAtual + 1} de ${total}`;
+
+  let corpo = "";
+  if (atual.tipo === "multipla") {
+    corpo = `<div class="opcoes-revisao">${(atual.opcoes || [])
+      .map((op) => `<button type="button" class="btn-secundario opcao-revisao" data-valor="${escapeHtml(op)}">${escapeHtml(op)}</button>`)
+      .join("")}</div>`;
+  } else if (atual.tipo === "vf") {
+    corpo = `<div class="opcoes-revisao">
+      <button type="button" class="btn-secundario opcao-revisao" data-valor="Verdadeiro">Verdadeiro</button>
+      <button type="button" class="btn-secundario opcao-revisao" data-valor="Falso">Falso</button>
+    </div>`;
+  } else {
+    corpo = `<textarea id="revisao-resposta-texto" rows="3" placeholder="Escreva sua resposta..."></textarea>
+      <button id="btn-conferir-revisao" type="button" class="btn-primario" style="margin-top:10px">Conferir resposta</button>`;
+  }
+
+  revisaoQuestaoArea.innerHTML = `
+    <div class="enunciado" style="font-size:1.1rem;margin-bottom:14px">${escapeHtml(atual.enunciado)}</div>
+    ${corpo}
+    <div id="revisao-feedback"></div>
+  `;
+
+  if (atual.tipo === "multipla" || atual.tipo === "vf") {
+    revisaoQuestaoArea.querySelectorAll(".opcao-revisao").forEach((btn) => {
+      btn.addEventListener("click", () => avaliarRevisao(btn.dataset.valor === atual.resposta, atual));
+    });
+  } else {
+    document.getElementById("btn-conferir-revisao").addEventListener("click", () => {
+      document.getElementById("revisao-feedback").innerHTML = `
+        <div class="gabarito-resposta" style="display:block">Resposta de referência: ${escapeHtml(atual.resposta)}</div>
+        <div style="margin-top:10px;display:flex;gap:10px">
+          <button id="btn-acertei" type="button" class="btn-secundario">Acertei</button>
+          <button id="btn-errei" type="button" class="btn-secundario">Não acertei</button>
+        </div>
+      `;
+      document.getElementById("btn-acertei").addEventListener("click", () => avaliarRevisao(true, atual));
+      document.getElementById("btn-errei").addEventListener("click", () => avaliarRevisao(false, atual));
+    });
+  }
+}
+
+function avaliarRevisao(acertou, questao) {
+  resultadosRevisao.push({ enunciado: questao.enunciado, acertou });
+  revisaoQuestaoArea.innerHTML += `
+    <div class="${acertou ? "gabarito-resposta" : "erro"}" style="display:block;margin-top:14px">
+      ${acertou ? "✅ Certinho!" : "❌ Essa não foi — resposta certa: " + escapeHtml(questao.resposta)}
+    </div>
+    <button id="btn-proxima-revisao" type="button" class="btn-primario" style="margin-top:14px">Próxima</button>
+  `;
+  document.getElementById("btn-proxima-revisao").addEventListener("click", avancarRevisao);
+}
+
+function avancarRevisao() {
+  indiceRevisaoAtual++;
+  if (indiceRevisaoAtual >= filaRevisao.length) {
+    finalizarRevisao();
+  } else {
+    renderQuestaoRevisao();
+  }
+}
+
+async function finalizarRevisao() {
+  revisaoQuestaoArea.hidden = true;
+  revisaoResultado.hidden = false;
+  const acertos = resultadosRevisao.filter((r) => r.acertou).length;
+  const total = resultadosRevisao.length;
+  const erradas = resultadosRevisao.filter((r) => !r.acertou).map((r) => r.enunciado);
+
+  revisaoResultado.innerHTML = `
+    <h3>Resultado da revisão</h3>
+    <p>Você acertou ${acertos} de ${total} questões.</p>
+    ${
+      erradas.length
+        ? `<h4>Pontos para revisar de novo:</h4><ul>${erradas.map((e) => `<li>${escapeHtml(e)}</li>`).join("")}</ul>`
+        : "<p>Mandou muito bem, sem pontos fracos dessa vez! 🎉</p>"
+    }
+    <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
+      <button id="btn-revisao-novamente" type="button" class="btn-secundario">Revisar tudo de novo</button>
+      ${erradas.length ? '<button id="btn-revisao-fracas" type="button" class="btn-secundario">Revisar só os erros</button>' : ""}
+      <button id="btn-revisao-fechar" type="button" class="btn-primario">Concluir</button>
+    </div>
+  `;
+  document.getElementById("btn-revisao-novamente").addEventListener("click", () => iniciarRevisao());
+  document.getElementById("btn-revisao-fechar").addEventListener("click", () => mostrarTela("tela-inicial", { empilhar: false }));
+  const btnFracas = document.getElementById("btn-revisao-fracas");
+  if (btnFracas) btnFracas.addEventListener("click", () => iniciarRevisao(true));
+
+  try {
+    await updateDoc(doc(db, "provas", provaEmEdicao.id), { questoesErradas: erradas });
+    provaEmEdicao.questoesErradas = erradas;
+  } catch (erro) {
+    console.error("Não foi possível salvar o resultado da revisão:", erro);
+  }
+}
 
 // ---------- utilidades ----------
 function escapeHtml(texto) {

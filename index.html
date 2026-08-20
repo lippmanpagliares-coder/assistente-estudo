@@ -124,8 +124,44 @@
 
     <div class="acoes-material">
       <button id="btn-mostrar-gabarito" class="btn-secundario">Mostrar gabarito</button>
-      <button id="btn-imprimir" class="btn-primario">🖨️ Gerar Caderno de Estudos (imprimir / salvar PDF)</button>
+      <button id="btn-iniciar-revisao" class="btn-secundario">▶ Iniciar Modo Revisão</button>
+      <button id="btn-imprimir" class="btn-primario">🖨️ Baixar Resumo de Estudos (PDF)</button>
     </div>
+
+    <div class="cartao-simulado">
+      <h3>Criar prova (simulado)</h3>
+      <p class="dica">Monta uma prova separada, só com as perguntas (sem gabarito junto), pronta para a criança responder sozinha.</p>
+      <div class="opcoes-simulado">
+        <label>
+          Quantidade
+          <select id="simulado-quantidade">
+            <option value="5">5 questões</option>
+            <option value="10" selected>10 questões</option>
+            <option value="15">15 questões</option>
+            <option value="20">20 questões</option>
+            <option value="todas">Todas</option>
+          </select>
+        </label>
+        <label>
+          Dificuldade
+          <select id="simulado-dificuldade">
+            <option value="misturado" selected>Misturado</option>
+            <option value="facil">Fácil</option>
+            <option value="medio">Médio</option>
+            <option value="dificil">Difícil</option>
+          </select>
+        </label>
+      </div>
+      <button id="btn-gerar-simulado" class="btn-primario">🖨️ Baixar Prova (PDF)</button>
+    </div>
+  </section>
+
+  <!-- TELA MODO REVISÃO -->
+  <section id="tela-revisao" class="tela" hidden>
+    <h2>Modo revisão</h2>
+    <p id="revisao-progresso" class="subtitulo"></p>
+    <div id="revisao-questao-area" class="parte-conteudo"></div>
+    <div id="revisao-resultado" class="parte-conteudo" hidden></div>
   </section>
 
 </main>
