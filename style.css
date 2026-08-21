@@ -69,6 +69,7 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 20px 80px; }
   box-shadow: 0 6px 16px rgba(47,169,105,0.35);
 }
 .btn-grande:hover { filter: brightness(1.05); }
+.btn-grande-secundario { background: var(--azul); box-shadow: 0 6px 16px rgba(47,111,237,0.35); font-size: 1.02rem; padding: 16px 32px; }
 
 .lista-provas { display: flex; flex-direction: column; gap: 12px; }
 .cartao-prova {
@@ -95,8 +96,22 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 20px 80px; }
   white-space: nowrap;
 }
 .estado-prova.pronta { background: #e3f6ea; color: #1f7a45; }
+.estado-prova.previa { background: var(--amarelo); color: #6b5313; }
 
 .msg-vazio { color: var(--texto-suave); font-style: italic; }
+
+.cartao-calendario-item {
+  background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 12px; display: flex; gap: 12px; align-items: flex-start;
+}
+.cartao-calendario-item .campos-calendario-item { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.cartao-calendario-item input[type="text"], .cartao-calendario-item input[type="date"] {
+  font-family: inherit; font-size: 0.92rem; padding: 8px 10px; border: 1px solid var(--borda);
+  border-radius: 8px; width: 100%;
+}
+.cartao-calendario-item label { font-size: 0.78rem; font-weight: 600; color: var(--texto-suave); }
+.cartao-calendario-item .linha-dupla { display: flex; gap: 10px; }
+.cartao-calendario-item .linha-dupla > div { flex: 1; }
 
 .cartao-login {
   background: var(--cartao);

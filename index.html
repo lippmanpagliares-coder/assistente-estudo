@@ -44,6 +44,9 @@
     <div class="cartao-destaque">
       <button id="btn-nova-prova" class="btn-grande">+ Preparar Nova Prova</button>
     </div>
+    <div class="cartao-destaque">
+      <button id="btn-importar-calendario" class="btn-grande btn-grande-secundario">📅 Importar Calendário de Provas</button>
+    </div>
 
     <h2>Provas preparadas</h2>
     <div id="lista-provas" class="lista-provas">
@@ -102,6 +105,36 @@
     </div>
   </section>
 
+  <!-- TELA IMPORTAR CALENDÁRIO -->
+  <section id="tela-calendario" class="tela" hidden>
+    <h2>Importar calendário de provas</h2>
+    <p class="dica">
+      Fotografe o calendário/agenda de provas da escola. A IA vai identificar cada prova (matéria, data
+      e conteúdo) pra você revisar antes de agendar.
+    </p>
+
+    <label>
+      Idade da criança (usada em todas as provas agendadas aqui)
+      <input type="number" id="calendario-idade" min="5" max="15" placeholder="Ex.: 9">
+    </label>
+
+    <div class="cartao-adicionar-pagina" style="margin-top:14px">
+      <label class="upload-foto">
+        📷 Foto do calendário
+        <input type="file" id="campo-foto-calendario" accept="image/*">
+      </label>
+      <p id="msg-foto-calendario-status" class="msg-vazio" hidden></p>
+    </div>
+
+    <div class="acoes-paginas">
+      <button id="btn-ler-calendario" type="button" class="btn-primario" disabled>Ler Calendário</button>
+      <p id="msg-lendo-calendario" class="msg-vazio" hidden>Lendo calendário com IA...</p>
+      <p id="msg-erro-calendario" class="erro" hidden></p>
+    </div>
+
+    <div id="lista-calendario-extraido"></div>
+  </section>
+
   <!-- TELA MATERIAL GERADO -->
   <section id="tela-material" class="tela" hidden>
     <div class="cabecalho-material">
@@ -109,6 +142,11 @@
         <h2 id="material-titulo">Material de estudos</h2>
         <p id="material-subtitulo" class="subtitulo"></p>
       </div>
+    </div>
+
+    <div id="aviso-previa" class="dica" hidden style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
+      <span>📎 Isso é uma prévia rápida (baseada só no assunto, sem as páginas do livro ainda).</span>
+      <button id="btn-completar-previa" type="button" class="btn-secundario">📷 Adicionar páginas do livro</button>
     </div>
 
     <div class="abas">

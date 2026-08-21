@@ -137,8 +137,8 @@ async function carregarProvas() {
         <p>Prova em ${dataFormatada}${prova.conteudo ? " · " + escapeHtml(prova.conteudo) : ""}</p>
       </div>
       <div class="linha-cartao-prova">
-        <span class="estado-prova ${prova.status === "pronta" ? "pronta" : ""}">${
-          prova.status === "pronta" ? "Material pronto" : "Em preparação"
+        <span class="estado-prova ${prova.status === "pronta" ? "pronta" : prova.status === "previa" ? "previa" : ""}">${
+          prova.status === "pronta" ? "Material pronto" : prova.status === "previa" ? "Prévia rápida" : "Em preparação"
         }</span>
         <button class="btn-excluir-prova" type="button">Excluir</button>
       </div>
@@ -165,9 +165,10 @@ function abrirProva(prova) {
     dataProva: prova.dataProva,
     conteudo: prova.conteudo,
     idade: prova.idade,
+    status: prova.status,
     questoesErradas: prova.questoesErradas || [],
   };
-  if (prova.status === "pronta" && prova.material) {
+  if ((prova.status === "pronta" || prova.status === "previa") && prova.material) {
     materialAtual = prova.material;
     exibirMaterial();
   } else {
@@ -207,6 +208,168 @@ document.getElementById("form-nova-prova").addEventListener("submit", async (ev)
   document.getElementById("titulo-paginas").textContent = `Adicionar páginas — ${materia}`;
   mostrarTela("tela-paginas");
 });
+
+// ---------- importar calendário de provas ----------
+let fotoCalendarioComprimida = null;
+let provasExtraidasDoCalendario = [];
+
+document.getElementById("btn-importar-calendario").addEventListener("click", () => {
+  fotoCalendarioComprimida = null;
+  provasExtraidasDoCalendario = [];
+  document.getElementById("campo-foto-calendario").value = "";
+  document.getElementById("lista-calendario-extraido").innerHTML = "";
+  document.getElementById("btn-ler-calendario").disabled = true;
+  document.getElementById("msg-erro-calendario").hidden = true;
+  document.getElementById("calendario-idade").value = "";
+  mostrarTela("tela-calendario");
+});
+
+document.getElementById("campo-foto-calendario").addEventListener("change", async () => {
+  const arquivo = document.getElementById("campo-foto-calendario").files[0];
+  if (!arquivo) return;
+  const msgStatus = document.getElementById("msg-foto-calendario-status");
+  msgStatus.textContent = "Preparando foto...";
+  msgStatus.hidden = false;
+  try {
+    fotoCalendarioComprimida = await comprimirImagem(arquivo);
+    document.getElementById("btn-ler-calendario").disabled = false;
+  } finally {
+    msgStatus.hidden = true;
+  }
+});
+
+document.getElementById("btn-ler-calendario").addEventListener("click", async () => {
+  if (!fotoCalendarioComprimida) return;
+  const msgLendo = document.getElementById("msg-lendo-calendario");
+  const msgErro = document.getElementById("msg-erro-calendario");
+  msgErro.hidden = true;
+  msgLendo.hidden = false;
+  document.getElementById("btn-ler-calendario").disabled = true;
+  try {
+    const resposta = await fetch("/api/ler-calendario", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imagem: { mediaType: fotoCalendarioComprimida.mediaType, base64: fotoCalendarioComprimida.dataUrl.split(",")[1] },
+        dataDeHoje: new Date().toISOString().slice(0, 10),
+      }),
+    });
+    const resultado = await resposta.json();
+    if (!resposta.ok) throw new Error(resultado.error || `Falha ao ler calendário (HTTP ${resposta.status})`);
+    provasExtraidasDoCalendario = (resultado.provas || []).map((p, i) => ({ ...p, id: "item-" + i, incluir: true }));
+    if (provasExtraidasDoCalendario.length === 0) {
+      msgErro.textContent = "Não encontrei nenhuma prova nessa foto. Tente uma foto mais nítida.";
+      msgErro.hidden = false;
+    }
+    renderListaCalendarioExtraido();
+  } catch (erro) {
+    msgErro.textContent = "Não foi possível ler o calendário: " + erro.message;
+    msgErro.hidden = false;
+  } finally {
+    msgLendo.hidden = true;
+    document.getElementById("btn-ler-calendario").disabled = false;
+  }
+});
+
+function renderListaCalendarioExtraido() {
+  const container = document.getElementById("lista-calendario-extraido");
+  if (provasExtraidasDoCalendario.length === 0) {
+    container.innerHTML = "";
+    return;
+  }
+  container.innerHTML =
+    `<h3 style="margin-top:24px">Provas encontradas — revise antes de agendar</h3>` +
+    provasExtraidasDoCalendario
+      .map(
+        (p) => `
+      <div class="cartao-calendario-item" data-id="${p.id}">
+        <input type="checkbox" class="check-incluir-item" ${p.incluir ? "checked" : ""} style="margin-top:8px">
+        <div class="campos-calendario-item">
+          <div class="linha-dupla">
+            <div>
+              <label>Matéria</label>
+              <input type="text" class="campo-item-materia" value="${escapeAtributo(p.materia || "")}">
+            </div>
+            <div>
+              <label>Data da prova</label>
+              <input type="date" class="campo-item-data" value="${escapeAtributo(p.dataProva || "")}">
+            </div>
+          </div>
+          <label>Conteúdo</label>
+          <input type="text" class="campo-item-conteudo" value="${escapeAtributo(p.conteudo || "")}">
+        </div>
+      </div>`
+      )
+      .join("") +
+    `
+    <label style="display:flex;align-items:center;gap:8px;margin:14px 0;font-weight:600;font-size:0.9rem">
+      <input type="checkbox" id="check-gerar-previa">
+      Já gerar uma prévia rápida de cada uma (baseada só no assunto, usa um pouco de crédito)
+    </label>
+    <button id="btn-agendar-provas" type="button" class="btn-primario">Agendar provas selecionadas</button>
+    <p id="msg-agendando" class="msg-vazio" hidden>Agendando...</p>
+  `;
+
+  document.getElementById("btn-agendar-provas").addEventListener("click", agendarProvasDoCalendario);
+}
+
+async function agendarProvasDoCalendario() {
+  const idadeGlobal = Number(document.getElementById("calendario-idade").value) || null;
+  const gerarPrevia = document.getElementById("check-gerar-previa").checked;
+  const msgAgendando = document.getElementById("msg-agendando");
+  const btnAgendar = document.getElementById("btn-agendar-provas");
+  btnAgendar.disabled = true;
+  msgAgendando.hidden = false;
+
+  const cartoes = document.querySelectorAll("#lista-calendario-extraido .cartao-calendario-item");
+  let quantidadeAgendada = 0;
+
+  for (const cartao of cartoes) {
+    const incluir = cartao.querySelector(".check-incluir-item").checked;
+    if (!incluir) continue;
+    const materia = cartao.querySelector(".campo-item-materia").value.trim();
+    const dataProva = cartao.querySelector(".campo-item-data").value;
+    const conteudo = cartao.querySelector(".campo-item-conteudo").value.trim();
+    if (!materia) continue;
+
+    let material = null;
+    let status = "preparando";
+
+    if (gerarPrevia) {
+      try {
+        msgAgendando.textContent = `Gerando prévia de ${materia}...`;
+        const resp = await fetch("/api/resumo-rapido", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ materia, conteudo, idade: idadeGlobal }),
+        });
+        if (resp.ok) {
+          material = await resp.json();
+          status = "previa";
+        }
+      } catch {
+        // se a prévia falhar, agenda mesmo assim sem material
+      }
+    }
+
+    await addDoc(collection(db, "provas"), {
+      materia,
+      dataProva,
+      conteudo,
+      idade: idadeGlobal,
+      status,
+      material,
+      criadoEm: serverTimestamp(),
+    });
+    quantidadeAgendada++;
+  }
+
+  msgAgendando.hidden = true;
+  btnAgendar.disabled = false;
+  await carregarProvas();
+  mostrarTela("tela-inicial", { empilhar: false });
+  alert(`${quantidadeAgendada} prova(s) agendada(s) com sucesso.`);
+}
 
 // ---------- adicionar páginas (fotos) ----------
 const campoFoto = document.getElementById("campo-foto");
@@ -388,6 +551,8 @@ function exibirMaterial() {
     provaEmEdicao.conteudo ? " · " + provaEmEdicao.conteudo : ""
   }`;
 
+  document.getElementById("aviso-previa").hidden = provaEmEdicao.status !== "previa";
+
   document.getElementById("parte-resumo").innerHTML =
     "<h4>📖 Resumo</h4>" +
     (materialAtual.resumo || "")
@@ -462,6 +627,13 @@ document.querySelectorAll(".aba").forEach((btn) => {
 btnMostrarGabarito.addEventListener("click", () => {
   const mostrando = parteQuestoes.classList.toggle("mostrar-gabarito");
   btnMostrarGabarito.textContent = mostrando ? "Ocultar gabarito" : "Mostrar gabarito";
+});
+
+document.getElementById("btn-completar-previa").addEventListener("click", () => {
+  paginasAtual = [];
+  renderListaPaginas();
+  document.getElementById("titulo-paginas").textContent = `Adicionar páginas — ${provaEmEdicao.materia}`;
+  mostrarTela("tela-paginas");
 });
 
 // ---------- impressão / PDF ----------
@@ -721,4 +893,8 @@ function escapeHtml(texto) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function escapeAtributo(texto) {
+  return escapeHtml(texto).replace(/"/g, "&quot;");
 }
