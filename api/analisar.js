@@ -99,7 +99,7 @@ async function handler(req, res) {
       },
       body: JSON.stringify({
         model: MODELO,
-        max_tokens: 3000,
+        max_tokens: 4096,
         messages: [{ role: "user", content: conteudoMensagem }],
       }),
     });
@@ -127,7 +127,13 @@ async function handler(req, res) {
     try {
       material = JSON.parse(textoLimpo);
     } catch {
-      res.status(502).json({ error: "A IA não retornou um JSON válido. Tente novamente." });
+      if (dados.stop_reason === "max_tokens") {
+        res.status(502).json({
+          error: "A resposta da IA foi cortada por ficar longa demais. Tente enviar menos páginas de cada vez.",
+        });
+      } else {
+        res.status(502).json({ error: "A IA não retornou um JSON válido. Tente novamente." });
+      }
       return;
     }
 
