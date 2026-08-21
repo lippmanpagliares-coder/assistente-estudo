@@ -272,6 +272,15 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 20px 80px; }
 .opcoes-revisao { display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
 .opcoes-revisao button { text-align: left; }
 
+.lista-relatorio-revisao { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.lista-relatorio-revisao li {
+  border-radius: 10px; padding: 10px 14px; font-size: 0.95rem;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.item-relatorio-certo { background: #eefaf1; border: 1px solid #bfe8cc; }
+.item-relatorio-errado { background: #fdecea; border: 1px solid #f3b4ac; }
+.relatorio-resposta-certa { font-size: 0.85rem; color: #9c2b1f; }
+
 .btn-excluir-prova {
   background: none; border: none; color: #c0392b; cursor: pointer; font-size: 0.85rem;
   padding: 4px 8px; align-self: flex-start;

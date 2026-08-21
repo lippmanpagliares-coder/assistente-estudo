@@ -648,7 +648,7 @@ function normalizarTexto(texto) {
 }
 
 function avaliarRevisao(acertou, questao, mensagem) {
-  resultadosRevisao.push({ enunciado: questao.enunciado, acertou });
+  resultadosRevisao.push({ enunciado: questao.enunciado, acertou, resposta: questao.resposta });
   const texto = mensagem
     ? `${acertou ? "✅" : "❌"} ${escapeHtml(mensagem)}`
     : acertou
@@ -679,14 +679,22 @@ async function finalizarRevisao() {
   const total = resultadosRevisao.length;
   const erradas = resultadosRevisao.filter((r) => !r.acertou).map((r) => r.enunciado);
 
+  const relatorioHtml = resultadosRevisao
+    .map(
+      (r) => `
+      <li class="${r.acertou ? "item-relatorio-certo" : "item-relatorio-errado"}">
+        <span>${r.acertou ? "✅" : "❌"} ${escapeHtml(r.enunciado)}</span>
+        ${!r.acertou ? `<span class="relatorio-resposta-certa">Resposta certa: ${escapeHtml(r.resposta)}</span>` : ""}
+      </li>`
+    )
+    .join("");
+
   revisaoResultado.innerHTML = `
     <h3>Resultado da revisão</h3>
     <p>Você acertou ${acertos} de ${total} questões.</p>
-    ${
-      erradas.length
-        ? `<h4>Pontos para revisar de novo:</h4><ul>${erradas.map((e) => `<li>${escapeHtml(e)}</li>`).join("")}</ul>`
-        : "<p>Mandou muito bem, sem pontos fracos dessa vez! 🎉</p>"
-    }
+    <h4>O que você acertou e errou</h4>
+    <ul class="lista-relatorio-revisao">${relatorioHtml}</ul>
+    ${erradas.length === 0 ? "<p>Mandou muito bem, sem pontos fracos dessa vez! 🎉</p>" : ""}
     <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
       <button id="btn-revisao-novamente" type="button" class="btn-secundario">Revisar tudo de novo</button>
       ${erradas.length ? '<button id="btn-revisao-fracas" type="button" class="btn-secundario">Revisar só os erros</button>' : ""}
