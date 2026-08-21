@@ -600,26 +600,63 @@ function renderQuestaoRevisao() {
     revisaoQuestaoArea.querySelectorAll(".opcao-revisao").forEach((btn) => {
       btn.addEventListener("click", () => avaliarRevisao(btn.dataset.valor === atual.resposta, atual));
     });
-  } else {
+  } else if (atual.tipo === "complete") {
     document.getElementById("btn-conferir-revisao").addEventListener("click", () => {
-      document.getElementById("revisao-feedback").innerHTML = `
-        <div class="gabarito-resposta" style="display:block">Resposta de referência: ${escapeHtml(atual.resposta)}</div>
-        <div style="margin-top:10px;display:flex;gap:10px">
-          <button id="btn-acertei" type="button" class="btn-secundario">Acertei</button>
-          <button id="btn-errei" type="button" class="btn-secundario">Não acertei</button>
-        </div>
-      `;
-      document.getElementById("btn-acertei").addEventListener("click", () => avaliarRevisao(true, atual));
-      document.getElementById("btn-errei").addEventListener("click", () => avaliarRevisao(false, atual));
+      const respostaDigitada = document.getElementById("revisao-resposta-texto").value;
+      const acertou = normalizarTexto(respostaDigitada) === normalizarTexto(atual.resposta);
+      avaliarRevisao(acertou, atual);
+    });
+  } else {
+    // resposta, desafio: resposta livre — corrigida por IA (modelo econômico), ignorando erros de escrita
+    document.getElementById("btn-conferir-revisao").addEventListener("click", async () => {
+      const respostaDigitada = document.getElementById("revisao-resposta-texto").value.trim();
+      if (!respostaDigitada) return;
+      const botao = document.getElementById("btn-conferir-revisao");
+      botao.disabled = true;
+      botao.textContent = "Corrigindo...";
+      try {
+        const resp = await fetch("/api/corrigir", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            enunciado: atual.enunciado,
+            respostaModelo: atual.resposta,
+            respostaAluno: respostaDigitada,
+          }),
+        });
+        const resultado = await resp.json();
+        if (!resp.ok) throw new Error(resultado.error || "Falha ao corrigir");
+        avaliarRevisao(!!resultado.correto, atual, resultado.feedback);
+      } catch (erro) {
+        document.getElementById("revisao-feedback").innerHTML =
+          '<div class="erro">Não foi possível corrigir automaticamente agora. Tente de novo.</div>';
+        botao.disabled = false;
+        botao.textContent = "Conferir resposta";
+      }
     });
   }
 }
 
-function avaliarRevisao(acertou, questao) {
+function normalizarTexto(texto) {
+  return (texto || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[.,!?;:]+$/g, "");
+}
+
+function avaliarRevisao(acertou, questao, mensagem) {
   resultadosRevisao.push({ enunciado: questao.enunciado, acertou });
+  const texto = mensagem
+    ? `${acertou ? "✅" : "❌"} ${escapeHtml(mensagem)}`
+    : acertou
+      ? "✅ Certinho!"
+      : "❌ Essa não foi — resposta certa: " + escapeHtml(questao.resposta);
   revisaoQuestaoArea.innerHTML += `
     <div class="${acertou ? "gabarito-resposta" : "erro"}" style="display:block;margin-top:14px">
-      ${acertou ? "✅ Certinho!" : "❌ Essa não foi — resposta certa: " + escapeHtml(questao.resposta)}
+      ${texto}
     </div>
     <button id="btn-proxima-revisao" type="button" class="btn-primario" style="margin-top:14px">Próxima</button>
   `;
