@@ -164,6 +164,7 @@ function abrirProva(prova) {
     materia: prova.materia,
     dataProva: prova.dataProva,
     conteudo: prova.conteudo,
+    idade: prova.idade,
     questoesErradas: prova.questoesErradas || [],
   };
   if (prova.status === "pronta" && prova.material) {
@@ -188,17 +189,19 @@ document.getElementById("form-nova-prova").addEventListener("submit", async (ev)
   const materia = document.getElementById("campo-materia").value.trim();
   const dataProva = document.getElementById("campo-data").value;
   const conteudo = document.getElementById("campo-conteudo").value.trim();
+  const idade = Number(document.getElementById("campo-idade").value);
 
   const docRef = await addDoc(collection(db, "provas"), {
     materia,
     dataProva,
     conteudo,
+    idade,
     status: "preparando",
     material: null,
     criadoEm: serverTimestamp(),
   });
 
-  provaEmEdicao = { id: docRef.id, materia, dataProva, conteudo };
+  provaEmEdicao = { id: docRef.id, materia, dataProva, conteudo, idade };
   paginasAtual = [];
   renderListaPaginas();
   document.getElementById("titulo-paginas").textContent = `Adicionar páginas — ${materia}`;
@@ -337,6 +340,7 @@ btnAnalisar.addEventListener("click", async () => {
         body: JSON.stringify({
           materia: provaEmEdicao.materia,
           conteudo: provaEmEdicao.conteudo,
+          idade: provaEmEdicao.idade,
           imagens: grupos[i].map((p) => ({
             mediaType: p.mediaType,
             base64: p.dataUrl.split(",")[1],
@@ -384,22 +388,31 @@ function exibirMaterial() {
     provaEmEdicao.conteudo ? " · " + provaEmEdicao.conteudo : ""
   }`;
 
-  document.getElementById("parte-resumo").innerHTML = (materialAtual.resumo || "")
-    .split(/\n\s*\n/)
-    .map((par) => `<p>${escapeHtml(par.trim())}</p>`)
-    .join("");
+  document.getElementById("parte-resumo").innerHTML =
+    "<h4>📖 Resumo</h4>" +
+    (materialAtual.resumo || "")
+      .split(/\n\s*\n/)
+      .map((par) => `<p>${escapeHtml(par.trim())}</p>`)
+      .join("");
 
   document.getElementById("parte-precisa").innerHTML =
-    "<h4>Preciso saber para a prova</h4><ul>" +
-    (materialAtual.precisoSaber || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("") +
+    "<h4>⭐ Preciso saber para a prova</h4><ul class=\"lista-preciso-saber\">" +
+    (materialAtual.precisoSaber || []).map((item) => `<li>✅ ${escapeHtml(item)}</li>`).join("") +
     "</ul>";
 
-  document.getElementById("parte-glossario").innerHTML = (materialAtual.glossario || [])
-    .map(
-      (g) =>
-        `<div class="bloco-glossario"><span class="termo">${escapeHtml(g.termo)}:</span> ${escapeHtml(g.definicao)}</div>`
-    )
-    .join("");
+  document.getElementById("parte-glossario").innerHTML =
+    "<h4>🔤 Palavras importantes</h4><div class=\"grade-glossario\">" +
+    (materialAtual.glossario || [])
+      .map(
+        (g) => `
+        <div class="cartao-glossario">
+          <div class="icone-glossario">${escapeHtml(g.icone) || "📌"}</div>
+          <div class="termo">${escapeHtml(g.termo)}</div>
+          <div class="definicao">${escapeHtml(g.definicao)}</div>
+        </div>`
+      )
+      .join("") +
+    "</div>";
 
   parteQuestoes.classList.remove("mostrar-gabarito");
   btnMostrarGabarito.textContent = "Mostrar gabarito";
@@ -425,9 +438,11 @@ function renderQuestao(questao, indice) {
   } else {
     corpo = `<div class="linha-resposta"></div>`;
   }
+  const selosDificuldade = { facil: "🟢 Fácil", medio: "🟡 Médio", dificil: "🔴 Difícil" };
+  const selo = selosDificuldade[questao.dificuldade] || "";
   return `
     <div class="questao">
-      <div class="tipo-tag">${rotulos[questao.tipo] || questao.tipo}</div>
+      <div class="tipo-tag">${rotulos[questao.tipo] || questao.tipo}${selo ? " · " + selo : ""}</div>
       <div class="enunciado">${numero}. ${escapeHtml(questao.enunciado)}</div>
       ${corpo}
       <div class="gabarito-resposta">Resposta: ${escapeHtml(questao.resposta)}</div>
@@ -489,10 +504,10 @@ document.getElementById("btn-gerar-simulado").addEventListener("click", () => {
 
   const parte2e3 = `<div class="pagina-impressa">
     <h2>Parte 2 — O que preciso saber</h2>
-    <ul>${(materialAtual.precisoSaber || []).map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>
+    <ul>${(materialAtual.precisoSaber || []).map((i) => `<li>✅ ${escapeHtml(i)}</li>`).join("")}</ul>
     <h2>Parte 3 — Palavras importantes</h2>
     ${(materialAtual.glossario || [])
-      .map((g) => `<p><strong>${escapeHtml(g.termo)}:</strong> ${escapeHtml(g.definicao)}</p>`)
+      .map((g) => `<p>${escapeHtml(g.icone) || "📌"} <strong>${escapeHtml(g.termo)}:</strong> ${escapeHtml(g.definicao)}</p>`)
       .join("")}
   </div>`;
 

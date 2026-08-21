@@ -219,8 +219,19 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 20px 80px; }
 .parte-conteudo h4 { margin-top: 0; }
 .parte-conteudo ul { padding-left: 20px; }
 
-.bloco-glossario { margin-bottom: 14px; }
-.bloco-glossario .termo { font-weight: 700; color: var(--azul-escuro); }
+.lista-preciso-saber { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.lista-preciso-saber li {
+  background: #eef6ff; border: 1px solid #cfe3fb; border-radius: 10px; padding: 10px 14px; font-size: 0.98rem;
+}
+
+.grade-glossario { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.cartao-glossario {
+  background: var(--amarelo); border: 1px solid var(--amarelo-borda); border-radius: 14px; padding: 16px;
+  text-align: center;
+}
+.cartao-glossario .icone-glossario { font-size: 2rem; margin-bottom: 6px; }
+.cartao-glossario .termo { font-weight: 700; color: #6b5313; margin-bottom: 6px; font-size: 1.05rem; }
+.cartao-glossario .definicao { font-size: 0.9rem; color: #4a3c0f; }
 
 .questao { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--borda); }
 .questao:last-child { border-bottom: none; }
