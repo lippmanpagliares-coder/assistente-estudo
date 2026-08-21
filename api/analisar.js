@@ -38,10 +38,12 @@ Responda APENAS com um JSON válido (sem markdown, sem texto fora do JSON), no f
   ]
 }
 
-Gere entre 10 e 14 questões no total, cobrindo os 5 tipos acima (pode repetir tipos). Cada questão deve
-ter o campo "dificuldade" com um dos valores "facil", "medio" ou "dificil", com uma mistura equilibrada
-das três. Todo o texto deve estar em linguagem simples e adequada para uma criança de ${idadeTexto}. O
-resumo deve ter 2 a 4 parágrafos, cada um curto.
+Gere entre 6 e 8 questões no total, cobrindo os 5 tipos acima (pode repetir tipos só se precisar pra
+chegar em 6). Cada questão deve ter o campo "dificuldade" com um dos valores "facil", "medio" ou
+"dificil". Todo o texto deve estar em linguagem simples e adequada para uma criança de ${idadeTexto}.
+Seja claro e completo nas explicações, mas evite enrolação: o resumo deve ter 2 a 3 parágrafos curtos, e
+o glossário deve trazer só os termos realmente necessários para entender o conteúdo (normalmente 4 a 7),
+não uma lista exaustiva.
 `;
 }
 
@@ -97,7 +99,7 @@ async function handler(req, res) {
       },
       body: JSON.stringify({
         model: MODELO,
-        max_tokens: 4096,
+        max_tokens: 3000,
         messages: [{ role: "user", content: conteudoMensagem }],
       }),
     });
